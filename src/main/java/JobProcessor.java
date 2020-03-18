@@ -6,11 +6,18 @@ import java.util.List;
 public class JobProcessor implements Runnable {
 
     public static abstract class Command {
+
+        public Connection getConnection() {
+            return connection;
+        }
+
         protected final Connection connection;
 
         protected Command(Connection connection) {
             this.connection = connection;
         }
+
+
 
         public abstract void execute() throws SQLException;
     }
@@ -71,6 +78,7 @@ public class JobProcessor implements Runnable {
             pstmt.setString(2, userToBeAdded.getUserGuid());
             pstmt.setString(3, userToBeAdded.getUserName());
             pstmt.executeUpdate();
+            System.out.print("user added with name "+userToBeAdded.getUserName());
         }
     }
 
@@ -80,13 +88,21 @@ public class JobProcessor implements Runnable {
             String mysqlPasswd = System.getenv("MYSQL_PASSWD");
             if(mysqlPasswd !=null)
             connection = DriverManager.getConnection("jdbc:mysql://localhost:5432/susers_schema","root",mysqlPasswd);
+
+            if (connection == null) {
+                System.err.println("FATAL: No database connection.");
+                return;
+            }
+
+            if(isTest){
+                connection.setAutoCommit(false);
+            }
+
+
         } catch (Exception e) {
             e.printStackTrace();
         }
-        if (connection == null) {
-            System.err.println("FATAL: No database connection.");
-            return;
-        }
+
         while (!Thread.currentThread().isInterrupted()) {
             try {
                 Statement stmt = connection.createStatement();
@@ -113,15 +129,36 @@ public class JobProcessor implements Runnable {
                         );
                         pstmt.setInt(1, rs.getInt("id"));
                         pstmt.executeUpdate();
+
+                        if(isTest){
+                            connection.commit();
+                        }
                     }
                     if (!hasPendingItems) {
                         System.out.println("No commands to execute.");
                     }
                 } finally {
-                    rs.close();
+
+                    try {
+                        if(rs !=null){
+                            rs.close();
+                        }
+                    }catch(SQLException ex){
+                        ex.printStackTrace();
+                    }
+
+
+
                 }
             } catch (Exception e) {
                 e.printStackTrace();
+                System.out.println("Rolling back data here....");
+                try{
+                    if(connection!=null)
+                        connection.rollback();
+                }catch(SQLException se2){
+                    se2.printStackTrace();
+                }
             }
             try {
                 Thread.sleep(5000);
@@ -132,7 +169,11 @@ public class JobProcessor implements Runnable {
     }
 
     public static void main(String[] args) {
+
         new Thread(new JobProcessor()).start();
+
+
+        //To test
     }
 
 }
