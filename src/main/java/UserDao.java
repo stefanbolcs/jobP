@@ -1,20 +1,27 @@
+import javax.sql.DataSource;
 import java.lang.reflect.Constructor;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Datasource {
+public class UserDao {
 
     public static final String CONNECTION = "jdbc:mysql://localhost:5432/susers_schema";
 
     private Connection connection;
 
+    private DataSource ds;
 
-    public boolean open() {
+    public UserDao(DataSource ds) {
+        this.ds = ds;
+    }
+
+
+    public boolean openConnection() {
         try {
             String mysqlPasswd = System.getenv("MYSQL_PASSWD");
-            if(mysqlPasswd !=null)
-                connection = DriverManager.getConnection(CONNECTION,"root",mysqlPasswd);
+            if (mysqlPasswd != null)
+                connection = DriverManager.getConnection(CONNECTION, "root", mysqlPasswd);
             return true;
 
         } catch (SQLException e) {
@@ -23,33 +30,13 @@ public class Datasource {
         }
     }
 
-    public boolean insertTable() {
-        try {
-
-        PreparedStatement pstmt = connection.prepareStatement(
-                "INSERT INTO susers (USER_ID, USER_GUID, USER_NAME) VALUES (?, ?, ?)",
-                Statement.RETURN_GENERATED_KEYS
-        );
-        pstmt.setInt(1,99);
-        pstmt.setString(2, "XXXX");
-        pstmt.setString(3, "Stefan");
-        int result = pstmt.executeUpdate();
-
-        if (result == 1) return true;
-        return false;
-
-    } catch (SQLException e) {
-        System.out.println(e.getMessage());
-        return false;
-    }
-    }
 
 
-    public void getUserData(){
+    public void getUserData() {
 
 
         try {
-            this.open();
+            this.openConnection();
             Statement stmt = connection.createStatement();
 
             ResultSet rs = stmt.executeQuery("SELECT id, type, param1, param2, param3 FROM queue_item WHERE processed = 0 ORDER BY id ASC");
@@ -65,7 +52,7 @@ public class Datasource {
                     parameterList.add(rs.getString("param1"));
                     parameterList.add(rs.getString("param2"));
                     parameterList.add(rs.getString("param3"));
-                    JobProcessor.Command command = (JobProcessor.Command)constructor.newInstance(connection, parameterList);
+                    JobProcessor.Command command = (JobProcessor.Command) constructor.newInstance(connection, parameterList);
                     command.execute();
                     // Update queue item.
                     PreparedStatement pstmt = connection.prepareStatement(
@@ -86,4 +73,33 @@ public class Datasource {
         }
 
     }
+
+
+    public boolean insertUser(User user) {
+        if (user != null) {
+            try {
+                this.openConnection();
+                PreparedStatement prepStmt = connection.prepareStatement("INSERT INTO susers (USER_ID, USER_GUID, USER_NAME) VALUES (?, ?, ?)",
+                        Statement.RETURN_GENERATED_KEYS
+                );
+
+                prepStmt.setInt(1, 99);
+                prepStmt.setString(2, "XXXX");
+                prepStmt.setString(3, "Stefan");
+                int result = prepStmt.executeUpdate();
+                this.connection.close();
+
+                if (result == 1) {
+                    return true;
+                } else {
+                    return false;
+                }
+            } catch (SQLException e) {
+                System.out.println(e.getMessage());
+                return false;
+            }
+        }
+        return false;
+    }
 }
+

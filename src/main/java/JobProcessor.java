@@ -94,9 +94,7 @@ public class JobProcessor implements Runnable {
                 return;
             }
 
-            if(isTest){
-                connection.setAutoCommit(false);
-            }
+
 
 
         } catch (Exception e) {
@@ -130,9 +128,7 @@ public class JobProcessor implements Runnable {
                         pstmt.setInt(1, rs.getInt("id"));
                         pstmt.executeUpdate();
 
-                        if(isTest){
-                            connection.commit();
-                        }
+
                     }
                     if (!hasPendingItems) {
                         System.out.println("No commands to execute.");
