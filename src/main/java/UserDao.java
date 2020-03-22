@@ -17,62 +17,44 @@ public class UserDao {
     }
 
 
-    public boolean openConnection() {
+    public void openConnection() {
         try {
             String mysqlPasswd = System.getenv("MYSQL_PASSWD");
             if (mysqlPasswd != null)
                 connection = DriverManager.getConnection(CONNECTION, "root", mysqlPasswd);
-            return true;
+
 
         } catch (SQLException e) {
             e.printStackTrace();
-            return false;
+
         }
     }
 
 
-
-    public void getUserData() {
+    public User getUserData(int id) throws SQLException {
 
 
         try {
             this.openConnection();
-            Statement stmt = connection.createStatement();
-
-            ResultSet rs = stmt.executeQuery("SELECT id, type, param1, param2, param3 FROM queue_item WHERE processed = 0 ORDER BY id ASC");
-            Boolean hasPendingItems = false;
-            try {
-                while (rs.next()) {
-                    hasPendingItems = true;
-                    // Execute job.
-                    Class<?> commandClass = Class.forName(rs.getString("type"));
-                    Constructor<?> constructor = commandClass.getDeclaredConstructor(Connection.class, List.class);
-                    List<String> parameterList = new ArrayList<String>(3);
-
-                    parameterList.add(rs.getString("param1"));
-                    parameterList.add(rs.getString("param2"));
-                    parameterList.add(rs.getString("param3"));
-                    JobProcessor.Command command = (JobProcessor.Command) constructor.newInstance(connection, parameterList);
-                    command.execute();
-                    // Update queue item.
-                    PreparedStatement pstmt = connection.prepareStatement(
-                            "UPDATE queue_item SET processed = 1 WHERE id = ?"
-                    );
-                    pstmt.setInt(1, rs.getInt("id"));
-                    pstmt.executeUpdate();
-                }
-                if (!hasPendingItems) {
-                    System.out.println("No commands to execute.");
-                }
-            } finally {
-                rs.close();
+            PreparedStatement stmt = connection.prepareStatement("SELECT id, type, param1, param2, param3 FROM queue_item WHERE id = ? ");
+            stmt.setInt(1,id);
+            ResultSet rs = stmt.executeQuery();
+            if(!rs.first()){
+                return null;
             }
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+            User u= new User(rs.getInt(1),rs.getString(2),  rs.getString(3));
 
+            connection.close();
+            stmt.close();
+            return u;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new SQLException();
+
+        }
     }
+
 
 
     public void insertUser(User user) {

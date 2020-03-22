@@ -104,8 +104,6 @@ public class JobProcessor implements Runnable {
         while (!Thread.currentThread().isInterrupted()) {
             try {
                 Statement stmt = connection.createStatement();
-
-
                 ResultSet rs = stmt.executeQuery("SELECT id, type, param1, param2, param3 FROM queue_item WHERE processed = 0 ORDER BY id ASC");
                 Boolean hasPendingItems = false;
                 try {
