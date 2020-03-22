@@ -75,7 +75,7 @@ public class UserDao {
     }
 
 
-    public boolean insertUser(User user) {
+    public void insertUser(User user) {
         if (user != null) {
             try {
                 this.openConnection();
@@ -83,23 +83,18 @@ public class UserDao {
                         Statement.RETURN_GENERATED_KEYS
                 );
 
-                prepStmt.setInt(1, 99);
-                prepStmt.setString(2, "XXXX");
-                prepStmt.setString(3, "Stefan");
+                prepStmt.setInt(1, user.getUserId());
+                prepStmt.setString(2, user.getUserGuid());
+                prepStmt.setString(3, user.getUserName());
                 int result = prepStmt.executeUpdate();
                 this.connection.close();
 
-                if (result == 1) {
-                    return true;
-                } else {
-                    return false;
-                }
             } catch (SQLException e) {
                 System.out.println(e.getMessage());
-                return false;
+
             }
         }
-        return false;
+
     }
 }
 
